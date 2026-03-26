@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8">
+  <title>Red Balls Pro</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; overflow: hidden;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff; position: relative; transition: background 0.5s;
+    }
+    .particle {
+      position: absolute; border-radius: 50%; pointer-events: none;
+      background: rgba(255,255,255,0.2); animation: particleMove linear forwards;
+    }
+    @keyframes particleMove {
+      0%{opacity:0;transform:translateY(0) scale(0.5);}
+      50%{opacity:0.5;}
+      100%{opacity:0;transform:translateY(-200px) scale(1);}
+    }
+    .info {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; padding: 7px 15px; border-radius: 35px;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      font-size: 14px; font-weight: 600; color: #fff;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5); z-index: 1000;
+      transition: box-shadow 0.3s;
+    }
+    .info span {
+      display: flex; align-items: center; gap: 4px; padding: 5px 9px;
+      border-radius: 20px; background: linear-gradient(145deg, #1f1f1f, #3a3a3a);
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.4); transition: transform 0.2s;
+    }
+    .info span:hover { transform: scale(1.08); }
+    .info span .icon { font-size: 14px; }
+
+    .powerup-bar {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 12px; padding: 10px 20px; border-radius: 30px;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); z-index: 1000;
+    }
+    .pu-btn {
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1); cursor: pointer; font-size: 22px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; position: relative; flex-direction: column;
+    }
+    .pu-btn:hover { transform: scale(1.15); background: rgba(255,255,255,0.2); }
+    .pu-btn.active { border-color: #ffd700; background: rgba(255,215,0,0.25); box-shadow: 0 0 12px #ffd700; }
+    .pu-btn.disabled { opacity: 0.35; cursor: not-allowed; }
+    .pu-count {
+      position: absolute; top: -4px; right: -4px; background: #ff4d4d;
+      border-radius: 50%; width: 18px; height: 18px; font-size: 11px;
+      display: flex; align-items: center; justify-content: center; font-weight: bold;
+    }
+
+    .ball {
+      position: absolute; width: 58px; height: 58px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 26px; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+      opacity: 0; animation: ballAppear 0.25s forwards; user-select: none;
+      transition: box-shadow 0.1s;
+    }
+    .ball:hover { transform: scale(1.2) !important; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+    .red    { background: radial-gradient(circle at 35% 35%, #ff7070, #cc0000); }
+    .green  { background: radial-gradient(circle at 35% 35%, #70ff70, #009900); }
+    .bomb   { background: radial-gradient(circle at 35% 35%, #555, #111); }
+    .golden { background: radial-gradient(circle at 35% 35%, #ffe066, #cc8800); }
+    .powerup-ball { background: radial-gradient(circle at 35% 35%, #aa66ff, #5500cc); }
+    .fast-ball { background: radial-gradient(circle at 35% 35%, #ff44ff, #880088); }
+    .ghost-ball { transition: opacity 3s linear !important; }
+
+    @keyframes ballAppear {0%{opacity:0;transform:scale(0.4);}100%{opacity:1;transform:scale(1);}}
+
+    .trail {
+      position: absolute; border-radius: 50%; pointer-events: none;
+      animation: trailFade 0.4s forwards;
+    }
+    @keyframes trailFade { 0%{opacity:0.5;} 100%{opacity:0;transform:scale(0.3);} }
+
+    .popup {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(20,20,30,0.97); padding: 30px 45px; border-radius: 20px;
+      text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      color: #fff; z-index: 2000; animation: fadeIn 0.4s ease; min-width: 300px;
+    }
+    .popup h2 { margin-bottom: 12px; font-size: 28px; color: #ffb347; }
+    .popup p  { font-size: 16px; margin: 6px 0; }
+    .popup .stat-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .popup .stat-row:last-child { border: none; }
+    .popup button {
+      margin: 6px 4px 0; padding: 10px 20px; font-size: 15px; border: none;
+      border-radius: 12px; background: linear-gradient(135deg, #ff4d4d, #ff9966);
+      color: white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      transition: transform 0.2s;
+    }
+    .popup button:hover { transform: scale(1.08); }
+    .popup button.secondary { background: linear-gradient(135deg, #4488ff, #44aaff); }
+    .popup button.third     { background: linear-gradient(135deg, #44bb44, #88dd44); }
+    .popup button.fourth    { background: linear-gradient(135deg, #8844ff, #aa66ff); }
+
+    @keyframes fadeIn {0%{opacity:0;transform:translate(-50%,-55%);}100%{opacity:1;transform:translate(-50%,-50%);}}
+
+    .explosion {
+      position: absolute; width: 58px; height: 58px; border-radius: 50%;
+      pointer-events: none; animation: explode 0.4s ease-out forwards;
+    }
+    @keyframes explode {0%{transform:scale(1);opacity:1;}100%{transform:scale(2.8);opacity:0;}}
+
+    .chain-ring {
+      position: absolute; border-radius: 50%; pointer-events: none;
+      border: 3px solid #00ffcc; animation: chainExpand 0.5s ease-out forwards;
+    }
+    @keyframes chainExpand {0%{transform:scale(0);opacity:1;}100%{transform:scale(4);opacity:0;}}
+
+    .combo-fire {
+      position: absolute; pointer-events: none; animation: flameUp 0.8s forwards;
+    }
+    @keyframes flameUp {
+      0%{transform:translateY(0) scale(0.5);opacity:1;}
+      50%{transform:translateY(-20px) scale(1.2);opacity:1;}
+      100%{transform:translateY(-40px) scale(0.8);opacity:0;}
+    }
+    .score-float {
+      position: absolute; font-size: 18px; font-weight: bold; pointer-events: none;
+      text-shadow: 1px 1px 5px rgba(0,0,0,0.8); animation: floatScore 0.9s forwards;
+      white-space: nowrap;
+    }
+    @keyframes floatScore {0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-65px) scale(1.4);}}
+
+    .achievement-toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, #ffd700, #ff8800);
+      color: #1a0a00; padding: 10px 22px; border-radius: 25px;
+      font-size: 15px; font-weight: bold; z-index: 1500;
+      animation: toastIn 3s forwards;
+    }
+    @keyframes toastIn {
+      0%{opacity:0;transform:translateX(-50%) translateY(20px);}
+      10%{opacity:1;transform:translateX(-50%) translateY(0);}
+      80%{opacity:1;}
+      100%{opacity:0;transform:translateX(-50%) translateY(-10px);}
+    }
+
+    .blitz-bar-wrap {
+      position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+      width: 300px; height: 10px; background: rgba(255,255,255,0.15);
+      border-radius: 10px; z-index: 1000; overflow: hidden; display: none;
+    }
+    #blitz-bar { height: 100%; background: linear-gradient(90deg, #ff4d4d, #ffd700); width: 100%; transition: width 0.1s linear; }
+
+    .shake { animation: shake 0.3s; }
+    @keyframes shake {0%{transform:translate(0);}25%{transform:translate(6px,-6px);}50%{transform:translate(-6px,6px);}75%{transform:translate(6px,6px);}100%{transform:translate(0);}}
+
+    .shield-flash {
+      position: fixed; top:0;left:0;right:0;bottom:0;
+      background: rgba(100,200,255,0.18); pointer-events: none;
+      animation: shieldFade 0.5s forwards; z-index: 500;
+    }
+    @keyframes shieldFade {0%{opacity:1;}100%{opacity:0;}}
+
+    .slow-overlay {
+      position: fixed; top:0;left:0;right:0;bottom:0; pointer-events: none;
+      border: 4px solid rgba(100,200,255,0.45); z-index: 499;
+      animation: borderPulse 1s infinite alternate;
+    }
+    @keyframes borderPulse {0%{border-color:rgba(100,200,255,0.2);}100%{border-color:rgba(100,200,255,0.7);}}
+
+    .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .leaderboard-table td { padding: 5px 8px; font-size: 14px; }
+    .leaderboard-table tr:first-child td { color: #ffd700; }
+
+    #survival-warning {
+      position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,50,50,0.85); padding: 5px 18px; border-radius: 20px;
+      font-size: 14px; font-weight: bold; display: none; z-index: 1001;
+      animation: warningPulse 0.5s infinite alternate;
+    }
+    @keyframes warningPulse {0%{opacity:0.7;}100%{opacity:1;}}
+
+    #menu-btn {
+      position: fixed; top: 20px; right: 20px;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+      border: none; border-radius: 20px; color: #fff;
+      padding: 8px 15px; font-size: 13px; cursor: pointer;
+      z-index: 1000; transition: background 0.2s;
+    }
+    #menu-btn:hover { background: rgba(255,80,80,0.45); }
+
+    #accuracy-display {
+      position: fixed; top: 20px; left: 20px;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+      border-radius: 20px; color: #fff; padding: 8px 14px;
+      font-size: 13px; font-weight: 600; z-index: 1000; display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="info">
+  <span><span class="icon">🧩</span> <span id="level">1</span></span>
+  <span><span class="icon">⏱</span> <span id="time">60</span></span>
+  <span><span class="icon">🎯</span> <span id="score">0</span></span>
+  <span><span class="icon">🔥</span> <span id="combo">0</span></span>
+  <span><span class="icon">🏆</span> <span id="best">0</span></span>
+  <span id="lives-display" style="display:none"><span class="icon">❤️</span> <span id="lives">3</span></span>
+</div>
+
+<div id="accuracy-display">🎯 <span id="acc-val">100</span>%</div>
+<div id="survival-warning">⚠️ სიჩქარე იზრდება!</div>
+<button id="menu-btn" onclick="confirmMenu()" style="display:none">🏠 მენიუ</button>
+<div class="blitz-bar-wrap" id="blitz-bar-wrap"><div id="blitz-bar"></div></div>
+
+<div class="powerup-bar" id="powerup-bar" style="display:none">
+  <div class="pu-btn" id="pu-slow"   onclick="usePowerup('slow')"   title="⚡ Slow Time">⚡<span class="pu-count" id="pu-slow-count">0</span></div>
+  <div class="pu-btn" id="pu-magnet" onclick="usePowerup('magnet')" title="🧲 Magnet">🧲<span class="pu-count" id="pu-magnet-count">0</span></div>
+  <div class="pu-btn" id="pu-shield" onclick="usePowerup('shield')" title="🛡️ Shield">🛡️<span class="pu-count" id="pu-shield-count">0</span></div>
+</div>
+
+<script>
+// ===== SUPABASE =====
+const SB_URL = "https://msqaslhfeytjwatwgvsf.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcWFzbGhmZXl0andhdHdndnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NjA3OTYsImV4cCI6MjA5MDEzNjc5Nn0.DJEIGgrHHyzKFnPt6UnmJEHS0H-Yusr1nSf18qtgIAc";
+
+async function sbInsert(name, sc, md, ac) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/leaderboard`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SB_KEY,
+        "Authorization": "Bearer " + SB_KEY,
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({ name, score: sc, mode: md, acc: ac })
+    });
+  } catch(e) { console.error("Supabase insert error", e); }
+}
+
+async function sbFetch() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/leaderboard?select=name,score,mode,acc&order=score.desc&limit=10`, {
+      headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+    });
+    return await res.json();
+  } catch(e) { return []; }
+}
+
+// ===== STATE =====
+let mode, score, timeLeft, level, ballsHit, combo, lastClick, gameActive;
+let spawnSpeed, ballSpeed, lives;
+let totalClicks = 0, totalHits = 0, biggestCombo = 0, fastestClick = 9999;
+let lastHitTime = 0;
+let activePowerups = { slow:false, magnet:false, shield:false };
+let powerupCounts  = { slow:1, magnet:1, shield:1 };
+let slowOverlay = null, survivalTimer = null;
+let activeBalls = [], animFrames = [];
+let blitzInterval = null;
+let unlockedAchievements = JSON.parse(localStorage.getItem("rbAchievements")||"[]");
+
+// ===== ACHIEVEMENTS DEF =====
+const ACHIEVEMENTS = [
+  { id:"first_combo10",  label:"🔥 პირველი x10 combo!",    check:()=>biggestCombo>=10 },
+  { id:"balls_100",      label:"💯 100 ბურთი!",             check:()=>totalHits>=100 },
+  { id:"score_200",      label:"🌟 200 ქულა!",              check:()=>score>=200 },
+  { id:"speed_demon",    label:"⚡ სწრაფი კლიკი (<150ms)!", check:()=>fastestClick<150 },
+  { id:"chain_master",   label:"🔗 Chain Reaction!",        check:()=>false }, // triggered manually
+  { id:"ghost_hunter",   label:"👻 Ghost Hunter!",          check:()=>false },
+];
+
+// ===== DOM REFS =====
+const scoreEl   = document.getElementById("score");
+const timeEl    = document.getElementById("time");
+const levelEl   = document.getElementById("level");
+const comboEl   = document.getElementById("combo");
+const bestEl    = document.getElementById("best");
+const livesEl   = document.getElementById("lives");
+const livesDisp = document.getElementById("lives-display");
+const menuBtn   = document.getElementById("menu-btn");
+const survWarn  = document.getElementById("survival-warning");
+const accDisp   = document.getElementById("accuracy-display");
+const accVal    = document.getElementById("acc-val");
+const blitzWrap = document.getElementById("blitz-bar-wrap");
+const blitzBar  = document.getElementById("blitz-bar");
+
+let scores = JSON.parse(localStorage.getItem("rbScores")||"[]");
+let bestScore = scores.length ? Math.max(...scores.map(s=>s.score)) : 0;
+bestEl.textContent = bestScore;
+
+// ===== MENU =====
+function showMenu() {
+  clearScreen();
+  document.getElementById("powerup-bar").style.display = "none";
+  accDisp.style.display = "none";
+  blitzWrap.style.display = "none";
+  document.body.style.background = "linear-gradient(135deg,#0f0c29,#302b63,#24243e)";
+  const d = document.createElement("div");
+  d.className = "popup";
+  d.innerHTML = `
+    <h2>🎮 Red Balls Pro</h2>
+    <p style="font-size:13px;color:#aaa;margin-bottom:12px">აირჩიე რეჟიმი</p>
+    <button onclick="initGame('normal')">🎮 Normal</button>
+    <button class="secondary" onclick="initGame('aim')">🎯 Aim Trainer</button>
+    <br>
+    <button class="third" onclick="initGame('survival')">💀 Survival</button>
+    <button onclick="initGame('ghost')" style="background:linear-gradient(135deg,#334,#667)">👻 Ghost</button>
+    <button class="fourth" onclick="initGame('blitz')">⚡ Blitz</button>
+    <br><br>
+    <button onclick="showLeaderboard()" style="background:linear-gradient(135deg,#8844ff,#aa66ff)">🏆 Leaderboard</button>
+    <button onclick="showAchievements()" style="background:linear-gradient(135deg,#cc8800,#ffcc00);color:#1a0a00">🏅 Achievements</button>
+  `;
+  document.body.appendChild(d);
+}
+
+// ===== LEADERBOARD =====
+async function showLeaderboard() {
+  clearScreen();
+  const d=document.createElement("div"); d.className="popup";
+  d.innerHTML=`<h2>🏆 Global Leaderboard</h2><p style="color:#aaa">⏳ იტვირთება...</p>`;
+  document.body.appendChild(d);
+
+  const data = await sbFetch();
+  const medals=["🥇","🥈","🥉","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"];
+  const modeEmoji={normal:"🎮",aim:"🎯",survival:"💀",ghost:"👻",blitz:"⚡"};
+
+  let rows = data.length
+    ? data.map((s,i)=>`
+        <tr>
+          <td>${medals[i]||i+1}</td>
+          <td style="font-weight:600;max-width:100px;overflow:hidden;text-overflow:ellipsis">${s.name}</td>
+          <td>${modeEmoji[s.mode]||""}</td>
+          <td style="color:#ffd700;font-weight:bold">${s.score}</td>
+          <td style="color:#aaa;font-size:12px">${s.acc||"—"}%</td>
+        </tr>`).join("")
+    : `<tr><td colspan="5" style="text-align:center;color:#666;padding:15px">ჯერ ვინც არ ითამაშა 🎮</td></tr>`;
+
+  d.innerHTML=`
+    <h2>🏆 Global Leaderboard</h2>
+    <table class="leaderboard-table" style="font-size:13px">
+      <tr style="color:#666;font-size:11px"><td></td><td>სახელი</td><td></td><td>ქულა</td><td>acc</td></tr>
+      ${rows}
+    </table>
+    <br>
+    <button onclick="showMenu()">🏠 მენიუ</button>
+    <button class="secondary" onclick="showLeaderboard()">🔄 განახლება</button>
+  `;
+}
+
+// ===== ACHIEVEMENTS SCREEN =====
+function showAchievements() {
+  clearScreen();
+  const lines = ACHIEVEMENTS.map(a=>{
+    const done = unlockedAchievements.includes(a.id);
+    return `<div style="padding:6px 0;font-size:14px;color:${done?"#ffd700":"#666"}">${done?"✅":"🔒"} ${a.label}</div>`;
+  }).join("");
+  const d = document.createElement("div");
+  d.className = "popup";
+  d.innerHTML = `<h2>🏅 Achievements</h2>${lines}<br><button onclick="showMenu()">🏠 მენიუ</button>`;
+  document.body.appendChild(d);
+}
+
+function checkAchievements(extra) {
+  ACHIEVEMENTS.forEach(a=>{
+    if (unlockedAchievements.includes(a.id)) return;
+    if ((extra && extra===a.id) || a.check()) {
+      unlockedAchievements.push(a.id);
+      localStorage.setItem("rbAchievements", JSON.stringify(unlockedAchievements));
+      showToast(a.label);
+    }
+  });
+}
+
+function showToast(text) {
+  const t = document.createElement("div");
+  t.className = "achievement-toast";
+  t.textContent = "🏅 " + text;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+// ===== INIT =====
+function initGame(selectedMode) {
+  mode = selectedMode;
+  score=0; level=1; ballsHit=0; combo=0; lastClick=0; gameActive=true;
+  totalClicks=0; totalHits=0; biggestCombo=0; fastestClick=9999; lastHitTime=0;
+  powerupCounts = {slow:1,magnet:1,shield:1};
+  activePowerups = {slow:false,magnet:false,shield:false};
+  activeBalls=[]; lives=3;
+
+  if      (mode==="aim")      { timeLeft=30;  spawnSpeed=250; ballSpeed=1.5; }
+  else if (mode==="survival") { timeLeft=999; spawnSpeed=700; ballSpeed=1.2; }
+  else if (mode==="ghost")    { timeLeft=45;  spawnSpeed=600; ballSpeed=1.0; }
+  else if (mode==="blitz")    { timeLeft=10;  spawnSpeed=200; ballSpeed=2.0; }
+  else                        { timeLeft=60;  spawnSpeed=650; ballSpeed=1.0; }
+
+  updateUI(); updatePowerupUI(); clearScreen();
+  document.getElementById("powerup-bar").style.display = "flex";
+  menuBtn.style.display = "block";
+  livesDisp.style.display  = mode==="survival" ? "flex" : "none";
+  accDisp.style.display    = mode==="aim"       ? "block" : "none";
+  blitzWrap.style.display  = mode==="blitz"     ? "block" : "none";
+
+  const ballCount = mode==="aim"||mode==="blitz" ? 4 : mode==="ghost" ? 3 : 2;
+  for (let i=0;i<ballCount;i++) createBall();
+  startTimer(); spawnParticles();
+  if (mode==="survival") startSurvivalEscalation();
+  if (mode==="blitz")    startBlitzBar();
+}
+
+// ===== SURVIVAL =====
+function startSurvivalEscalation() {
+  let tick = 0;
+  survivalTimer = setInterval(()=>{
+    if (!gameActive) { clearInterval(survivalTimer); return; }
+    tick++;
+    ballSpeed += 0.08;
+    spawnSpeed = Math.max(200, spawnSpeed-25);
+    if (tick%4===0) {
+      survWarn.style.display="block";
+      setTimeout(()=>survWarn.style.display="none",1500);
+      if (activeBalls.length<6) createBall();
+    }
+  }, 5000);
+}
+
+// ===== BLITZ BAR =====
+function startBlitzBar() {
+  const total = 10000;
+  const start = Date.now();
+  blitzInterval = setInterval(()=>{
+    const pct = Math.max(0,1-(Date.now()-start)/total)*100;
+    blitzBar.style.width = pct+"%";
+    blitzBar.style.background = pct>50
+      ? "linear-gradient(90deg,#ff4d4d,#ffd700)"
+      : pct>20
+        ? "linear-gradient(90deg,#ff8800,#ffdd00)"
+        : "linear-gradient(90deg,#ff0000,#ff4400)";
+    if (pct<=0) clearInterval(blitzInterval);
+  }, 80);
+}
+
+// ===== TIMER =====
+function startTimer() {
+  const interval = setInterval(()=>{
+    if (!gameActive) { clearInterval(interval); return; }
+    if (mode!=="survival") {
+      timeLeft--; updateUI();
+      if (timeLeft<=0) { clearInterval(interval); gameActive=false; endGame(); }
+    } else {
+      timeEl.textContent="∞";
+    }
+  },1000);
+}
+
+// ===== BALL TYPE =====
+function getType() {
+  const r = Math.random();
+  if (r<0.04) return "powerup-ball";
+  if (r<0.09) return "golden";
+  if (r<0.15) return "fast-ball";
+  if (r<0.25) return "bomb";
+  if (r<0.55) return "green";
+  return "red";
+}
+
+const FACES = {
+  red:"😡", green:"😊", bomb:"💣", golden:"⭐", "powerup-ball":"🎁", "fast-ball":"💨"
+};
+
+// ===== CREATE BALL =====
+function createBall() {
+  if (!gameActive) return;
+  const ball = document.createElement("div");
+  const type = getType();
+  ball.classList.add("ball", type);
+  ball.textContent = FACES[type] || "";
+
+  const margin = 65;
+  let px = margin + Math.random()*(window.innerWidth-margin*2);
+  let py = margin + Math.random()*(window.innerHeight-margin*2);
+  ball.style.left = px+"px"; ball.style.top = py+"px";
+
+  let spd = type==="fast-ball" ? ballSpeed*3 : ballSpeed;
+  let vx = (Math.random()-0.5)*spd*2;
+  let vy = (Math.random()-0.5)*spd*2;
+  if (Math.abs(vx)<0.3) vx = 0.3*Math.sign(vx||1);
+  if (Math.abs(vy)<0.3) vy = 0.3*Math.sign(vy||1);
+
+  // Ghost mode: balls fade out
+  if (mode==="ghost") {
+    ball.classList.add("ghost-ball");
+    const delay = 1500 + Math.random()*1500;
+    setTimeout(()=>{ if (ball.parentNode) ball.style.opacity="0"; }, delay);
+  }
+
+  let clicked = false;
+  ball.onclick = ()=>{ if(clicked)return; clicked=true; handleClick(type,ball); };
+  document.body.appendChild(ball);
+
+  const lifetime = type==="fast-ball" ? 900 : Math.max(1200, 2500-level*120);
+  const killTimer = setTimeout(()=>{
+    if (!clicked && ball.parentNode) {
+      ball.remove(); removeBallRef(ball);
+      if (type!=="bomb"&&type!=="powerup-ball") { combo=0; totalClicks++; updateUI(); updateAccuracy(); }
+      if (gameActive) createBall();
+    }
+  }, lifetime);
+
+  const ballObj = {el:ball, px, py, vx, vy, killTimer, type, clicked:()=>clicked};
+  activeBalls.push(ballObj);
+  moveBall(ballObj);
+}
+
+function moveBall(obj) {
+  if (!gameActive || obj.clicked()) return;
+  const spd = activePowerups.slow ? 0.25 : 1;
+  obj.px += obj.vx*spd;
+  obj.py += obj.vy*spd;
+  const W=window.innerWidth-60, H=window.innerHeight-60;
+  if (obj.px<0){obj.px=0;obj.vx*=-1;}
+  if (obj.px>W){obj.px=W;obj.vx*=-1;}
+  if (obj.py<0){obj.py=0;obj.vy*=-1;}
+  if (obj.py>H){obj.py=H;obj.vy*=-1;}
+  if (obj.el.parentNode) {
+    obj.el.style.left=obj.px+"px";
+    obj.el.style.top=obj.py+"px";
+    // Trail
+    spawnTrail(obj);
+  }
+  if (!obj.clicked()) {
+    const af = requestAnimationFrame(()=>moveBall(obj));
+    animFrames.push(af);
+  }
+}
+
+let trailTick = 0;
+function spawnTrail(obj) {
+  trailTick++;
+  if (trailTick % 4 !== 0) return; // every 4 frames
+  const t = document.createElement("div");
+  t.className = "trail";
+  const sz = 20+Math.random()*15;
+  t.style.width=sz+"px"; t.style.height=sz+"px";
+  t.style.left=(obj.px+20)+"px"; t.style.top=(obj.py+20)+"px";
+  const colors = {
+    red:"rgba(220,50,50,0.6)", green:"rgba(50,200,50,0.6)",
+    bomb:"rgba(100,100,100,0.5)", golden:"rgba(255,200,0,0.7)",
+    "fast-ball":"rgba(220,50,220,0.6)", "powerup-ball":"rgba(150,50,250,0.6)"
+  };
+  t.style.background = colors[obj.type]||"rgba(255,255,255,0.4)";
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 400);
+}
+
+function removeBallRef(el) {
+  const i = activeBalls.findIndex(b=>b.el===el);
+  if (i!==-1) activeBalls.splice(i,1);
+}
+
+// ===== HANDLE CLICK =====
+function handleClick(type, ball) {
+  if (!gameActive) return;
+  const rect = ball.getBoundingClientRect();
+  totalClicks++;
+
+  if (type==="powerup-ball") {
+    const map={"🎁":"slow"}; // random PU
+    const pus=["slow","magnet","shield"];
+    const pu=pus[Math.floor(Math.random()*3)];
+    powerupCounts[pu]=Math.min(powerupCounts[pu]+1,3);
+    updatePowerupUI();
+    createExplosion(rect.left,rect.top,"#aa66ff");
+    createScoreFloat(rect.left,rect.top,"🎁 +PU!",null);
+    ball.remove(); removeBallRef(ball);
+    createBall(); return;
+  }
+
+  const now = Date.now();
+  if (now-lastClick<700) combo++; else combo=0;
+  if (lastHitTime>0 && type!=="bomb") {
+    const gap = now-lastHitTime;
+    if (gap<fastestClick) fastestClick=gap;
+  }
+  lastClick = now;
+  if (type!=="bomb") lastHitTime=now;
+  if (combo>biggestCombo) biggestCombo=combo;
+
+  let mult=1;
+  if (combo>=3)  mult=1.2;
+  if (combo>=5)  mult=1.5;
+  if (combo>=10) mult=2.0;
+
+  let points=0;
+  if (type==="red")       points=1;
+  if (type==="green")     points=3;
+  if (type==="golden")    points=8;
+  if (type==="fast-ball") points=10;
+
+  if (type==="bomb") {
+    if (activePowerups.shield) {
+      activePowerups.shield=false; updatePowerupUI(); flashShield();
+      createScoreFloat(rect.left,rect.top,"🛡️ BLOCKED!",null);
+    } else if (mode==="survival") {
+      lives--; livesEl.textContent=lives; shakeScreen();
+      createScoreFloat(rect.left,rect.top,"💔 -1 life",null);
+      setScreenTint("rgba(255,0,0,0.15)");
+      if (lives<=0){ball.remove();removeBallRef(ball);gameActive=false;endGame();return;}
+      points=0;
+    } else {
+      points=-8; shakeScreen();
+      setScreenTint("rgba(255,0,0,0.12)");
+    }
+  } else {
+    totalHits++;
+    // Chain reaction for green balls
+    if (type==="green") triggerChain(rect.left+29, rect.top+29);
+  }
+
+  score += Math.floor((points+combo)*mult);
+  if (type!=="bomb") ballsHit++;
+
+  const expColor = type==="golden"?"#ffd700":type==="green"?"#44ff44":type==="fast-ball"?"#ff44ff":"#ff5500";
+  createExplosion(rect.left,rect.top,expColor);
+  if (points!==0||combo>0) createScoreFloat(rect.left,rect.top,points,combo,mult);
+  ball.remove(); removeBallRef(ball);
+  updateUI(); updateAccuracy(); showComboFlame(); comboPowerEffect();
+  setComboScreenColor();
+  checkAchievements();
+  if (mode==="ghost"&&type==="golden") checkAchievements("ghost_hunter");
+  if (mode==="normal"&&ballsHit>=25+level*5) nextLevel();
+  else createBall();
+}
+
+// ===== CHAIN REACTION =====
+function triggerChain(cx, cy) {
+  const radius = 120;
+  const nearby = activeBalls.filter(obj=>{
+    if (obj.clicked()) return false;
+    const bx=obj.px+29, by=obj.py+29;
+    const d=Math.sqrt((bx-cx)**2+(by-cy)**2);
+    return d<radius && !["bomb","powerup-ball"].includes(obj.type);
+  });
+  if (nearby.length===0) return;
+  // Ring effect
+  const ring=document.createElement("div"); ring.className="chain-ring";
+  ring.style.width="60px"; ring.style.height="60px";
+  ring.style.left=(cx-30)+"px"; ring.style.top=(cy-30)+"px";
+  document.body.appendChild(ring);
+  setTimeout(()=>ring.remove(),500);
+  nearby.forEach(obj=>{
+    setTimeout(()=>{
+      if (!obj.clicked()&&obj.el.parentNode) obj.el.click();
+    },80);
+  });
+  if (nearby.length>=2) {
+    checkAchievements("chain_master");
+    createScoreFloat(cx,cy,"🔗 CHAIN x"+nearby.length+"!",null);
+  }
+}
+
+// ===== COMBO SCREEN COLOR =====
+function setComboScreenColor() {
+  const bg = combo>=10
+    ? "linear-gradient(135deg,#2a0010,#5a0030,#1a001a)"
+    : combo>=5
+      ? "linear-gradient(135deg,#1a0a00,#3a1500,#1a0a00)"
+      : "linear-gradient(135deg,#0f0c29,#302b63,#24243e)";
+  document.body.style.background = bg;
+}
+
+function setScreenTint(color) {
+  const d=document.createElement("div");
+  d.style.cssText=`position:fixed;top:0;left:0;right:0;bottom:0;background:${color};pointer-events:none;z-index:498;animation:shieldFade 0.6s forwards`;
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),600);
+}
+
+// ===== ACCURACY =====
+function updateAccuracy() {
+  if (!totalClicks) return;
+  const pct = Math.round(totalHits/totalClicks*100);
+  accVal.textContent = pct;
+}
+
+// ===== POWERUPS =====
+function usePowerup(type) {
+  if (powerupCounts[type]<=0||!gameActive) return;
+  powerupCounts[type]--;
+  if (type==="slow") {
+    activePowerups.slow=true;
+    if (!slowOverlay){slowOverlay=document.createElement("div");slowOverlay.className="slow-overlay";document.body.appendChild(slowOverlay);}
+    setTimeout(()=>{activePowerups.slow=false;if(slowOverlay){slowOverlay.remove();slowOverlay=null;}updatePowerupUI();},5000);
+  }
+  if (type==="magnet") {
+    activePowerups.magnet=true;
+    [...activeBalls].forEach(obj=>{
+      if (!obj.clicked()&&obj.el.parentNode&&obj.type!=="bomb") setTimeout(()=>obj.el.click(),50);
+    });
+    setTimeout(()=>{activePowerups.magnet=false;updatePowerupUI();},300);
+  }
+  if (type==="shield") {
+    activePowerups.shield=true;
+    document.getElementById("pu-shield").classList.add("active");
+  }
+  updatePowerupUI();
+}
+
+function updatePowerupUI() {
+  ["slow","magnet","shield"].forEach(t=>{
+    const btn=document.getElementById("pu-"+t);
+    document.getElementById("pu-"+t+"-count").textContent=powerupCounts[t];
+    btn.classList.toggle("disabled",powerupCounts[t]<=0);
+    if(t==="shield") btn.classList.toggle("active",activePowerups.shield);
+    if(t==="slow")   btn.classList.toggle("active",activePowerups.slow);
+  });
+}
+
+function flashShield(){
+  const d=document.createElement("div");d.className="shield-flash";
+  document.body.appendChild(d);setTimeout(()=>d.remove(),500);
+}
+
+// ===== LEVEL UP =====
+function nextLevel() {
+  level++; ballsHit=0; timeLeft+=10; ballSpeed+=0.2;
+  spawnSpeed=Math.max(250,spawnSpeed-50);
+  powerupCounts.slow=Math.min(powerupCounts.slow+1,3);
+  showPopup(`⚡ Level ${level}!`); updateUI(); updatePowerupUI();
+  setTimeout(()=>createBall(),1000);
+}
+
+// ===== END GAME =====
+function endGame() {
+  gameActive=false;
+  clearInterval(survivalTimer);
+  clearInterval(blitzInterval);
+  survWarn.style.display="none";
+  const acc = totalClicks>0 ? Math.round(totalHits/totalClicks*100) : 100;
+  scores.push({score,level,mode,acc});
+  if (scores.length>20) scores.shift();
+  localStorage.setItem("rbScores",JSON.stringify(scores));
+  if (score>bestScore) bestScore=score;
+  bestEl.textContent=bestScore;
+  document.body.style.background="linear-gradient(135deg,#0f0c29,#302b63,#24243e)";
+
+  const modeLabel={normal:"🎮 Normal",aim:"🎯 Aim",survival:"💀 Survival",ghost:"👻 Ghost",blitz:"⚡ Blitz"};
+  const d=document.createElement("div"); d.className="popup";
+  d.innerHTML=`
+    <h2>Game Over</h2>
+    <p style="color:#aaa;font-size:13px;margin-bottom:10px">${modeLabel[mode]||mode}</p>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px 16px;margin-bottom:12px">
+      <div class="stat-row"><span>🎯 ქულა</span><span><b>${score}</b></span></div>
+      <div class="stat-row"><span>🧩 Level</span><span>${level}</span></div>
+      <div class="stat-row"><span>🎯 Accuracy</span><span>${acc}%</span></div>
+      <div class="stat-row"><span>🔥 Max Combo</span><span>x${biggestCombo}</span></div>
+      <div class="stat-row"><span>⚡ Fastest Click</span><span>${fastestClick===9999?"—":fastestClick+"ms"}</span></div>
+      <div class="stat-row"><span>🏆 Best</span><span>${bestScore}</span></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <input id="player-name" type="text" maxlength="20" placeholder="შეიყვანე სახელი 🏆"
+        style="width:100%;padding:10px 14px;border-radius:12px;border:none;background:rgba(255,255,255,0.12);
+        color:#fff;font-size:15px;outline:none;text-align:center;margin-bottom:6px">
+      <button id="submit-score-btn" onclick="submitScore(${score},'${mode}',${acc})">🌍 Leaderboard-ზე გამოქვეყნება</button>
+    </div>
+    <button onclick="restartGame()">🔁 Restart</button>
+    <button class="secondary" onclick="showLeaderboard()">📊 Global Scores</button>
+    <button class="third" onclick="returnToMenu()">🏠 Menu</button>
+  `;
+  document.body.appendChild(d);
+}
+
+async function submitScore(sc, md, ac) {
+  const nameEl = document.getElementById("player-name");
+  const btn = document.getElementById("submit-score-btn");
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.style.border="2px solid #ff4444"; nameEl.placeholder="სახელი სავალდებულოა!"; return; }
+  btn.textContent = "⏳ იგზავნება...";
+  btn.disabled = true;
+  await sbInsert(name, sc, md, ac);
+  btn.textContent = "✅ გამოქვეყნდა!";
+  btn.style.background = "linear-gradient(135deg,#44bb44,#88dd44)";
+}
+
+function restartGame(){stopAll();initGame(mode);}
+function confirmMenu(){stopAll();showMenu();}
+function returnToMenu(){stopAll();showMenu();}
+
+function stopAll(){
+  gameActive=false;
+  clearInterval(survivalTimer);
+  clearInterval(blitzInterval);
+  animFrames.forEach(af=>cancelAnimationFrame(af));
+  animFrames=[]; activeBalls=[];
+  survWarn.style.display="none";
+  menuBtn.style.display="none";
+  livesDisp.style.display="none";
+  accDisp.style.display="none";
+  blitzWrap.style.display="none";
+  if(slowOverlay){slowOverlay.remove();slowOverlay=null;}
+}
+
+// ===== UI =====
+function updateUI(){
+  scoreEl.textContent=score;
+  if(mode!=="survival") timeEl.textContent=timeLeft;
+  levelEl.textContent=level;
+  comboEl.textContent=combo;
+}
+
+function clearScreen(){
+  document.querySelectorAll(".ball,.popup,.combo-fire,.score-float,.particle,.explosion,.shield-flash,.trail,.chain-ring,.achievement-toast").forEach(e=>e.remove());
+  activeBalls=[];
+  animFrames.forEach(af=>cancelAnimationFrame(af));
+  animFrames=[];
+}
+
+function showPopup(text){
+  const d=document.createElement("div");d.className="popup";
+  d.innerHTML=`<h2>${text}</h2>`;
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),1100);
+}
+
+// ===== VISUALS =====
+function createExplosion(x,y,color="#ff5500"){
+  const exp=document.createElement("div");exp.className="explosion";
+  exp.style.left=x+"px";exp.style.top=y+"px";
+  exp.style.background=`radial-gradient(circle,#ffdd00,${color})`;
+  document.body.appendChild(exp);
+  setTimeout(()=>exp.remove(),400);
+}
+
+function createScoreFloat(x,y,points,combo,mult){
+  const f=document.createElement("div");f.className="score-float";
+  if(typeof points==="string"||combo===null){
+    f.textContent=points;f.style.color="#00ffcc";
+  } else {
+    const val=Math.floor((points+combo)*mult);
+    f.textContent=(val>=0?"+":"")+val;
+    f.style.color=val>=8?"#ffd700":val>=0?"#ffff00":"#ff4444";
+  }
+  f.style.left=x+"px";f.style.top=y+"px";
+  document.body.appendChild(f);
+  setTimeout(()=>f.remove(),900);
+}
+
+function showComboFlame(){
+  if(combo<=0) return;
+  const rect=comboEl.getBoundingClientRect();
+  const n=Math.min(combo,7);
+  for(let i=0;i<n;i++){
+    const fl=document.createElement("div");fl.className="combo-fire";fl.textContent="🔥";
+    let sz=16+combo*3;fl.style.fontSize=sz+"px";
+    fl.style.color=combo<=2?"#ff8c00":combo<=5?"#ffd700":"#ff4500";
+    fl.style.left=rect.left+rect.width/2-sz/2+"px";
+    fl.style.top=rect.top-18-i*11+"px";
+    fl.style.animationDelay=(i*0.05)+"s";
+    document.body.appendChild(fl);
+    setTimeout(()=>fl.remove(),800);
+  }
+}
+
+function comboPowerEffect(){
+  if(combo<5) return;
+  document.body.classList.add("shake");
+  setTimeout(()=>document.body.classList.remove("shake"),350);
+  const info=document.querySelector(".info");
+  info.style.boxShadow="0 0 25px 5px #ff4500,0 0 45px 12px #ffd700";
+  setTimeout(()=>info.style.boxShadow="0 8px 20px rgba(0,0,0,0.5)",450);
+}
+
+function shakeScreen(){
+  document.body.classList.add("shake");
+  setTimeout(()=>document.body.classList.remove("shake"),300);
+}
+
+// ===== PARTICLES =====
+function spawnParticles(){
+  for(let i=0;i<20;i++){
+    const p=document.createElement("div");p.className="particle";
+    let s=Math.random()*4+2;p.style.width=s+"px";p.style.height=s+"px";
+    p.style.left=Math.random()*window.innerWidth+"px";
+    p.style.top=window.innerHeight+Math.random()*200+"px";
+    p.style.animationDuration=(Math.random()*3+2)+"s";
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),5000);
+  }
+  if(gameActive) setTimeout(spawnParticles,1200);
+}
+
+showMenu();
+</script>
+</body>
+</html>
