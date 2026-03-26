@@ -2,14 +2,18 @@
 <html lang="ka">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Red Balls Pro</title>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0; overflow: hidden;
       background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff; position: relative; transition: background 0.5s;
+      color: #fff; position: fixed; width: 100%; height: 100%;
+      transition: background 0.5s; touch-action: none;
     }
     .particle {
       position: absolute; border-radius: 50%; pointer-events: none;
@@ -21,50 +25,56 @@
       100%{opacity:0;transform:translateY(-200px) scale(1);}
     }
     .info {
-      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 8px; padding: 7px 15px; border-radius: 35px;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
-      font-size: 14px; font-weight: 600; color: #fff;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5); z-index: 1000;
-      transition: box-shadow 0.3s;
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 5px; padding: 5px 10px; border-radius: 30px;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      font-size: 12px; font-weight: 700; color: #fff;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000;
+      transition: box-shadow 0.3s; white-space: nowrap;
     }
     .info span {
-      display: flex; align-items: center; gap: 4px; padding: 5px 9px;
-      border-radius: 20px; background: linear-gradient(145deg, #1f1f1f, #3a3a3a);
-      box-shadow: 2px 2px 8px rgba(0,0,0,0.4); transition: transform 0.2s;
+      display: flex; align-items: center; gap: 3px; padding: 4px 7px;
+      border-radius: 15px; background: linear-gradient(145deg, #1f1f1f, #3a3a3a);
+      box-shadow: 1px 1px 5px rgba(0,0,0,0.4);
     }
-    .info span:hover { transform: scale(1.08); }
-    .info span .icon { font-size: 14px; }
+    .info span .icon { font-size: 12px; }
 
     .powerup-bar {
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 12px; padding: 10px 20px; border-radius: 30px;
-      background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); z-index: 1000;
+      position: fixed; bottom: env(safe-area-inset-bottom, 15px); bottom: max(15px, env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%);
+      display: flex; gap: 14px; padding: 10px 18px; border-radius: 35px;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1000;
     }
     .pu-btn {
-      width: 52px; height: 52px; border-radius: 50%;
+      width: 60px; height: 60px; border-radius: 50%;
       border: 2px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.1); cursor: pointer; font-size: 22px;
+      background: rgba(255,255,255,0.1); cursor: pointer; font-size: 26px;
       display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s; position: relative; flex-direction: column;
+      transition: all 0.15s; position: relative; flex-direction: column;
+      -webkit-tap-highlight-color: transparent;
     }
-    .pu-btn:hover { transform: scale(1.15); background: rgba(255,255,255,0.2); }
-    .pu-btn.active { border-color: #ffd700; background: rgba(255,215,0,0.25); box-shadow: 0 0 12px #ffd700; }
-    .pu-btn.disabled { opacity: 0.35; cursor: not-allowed; }
+    .pu-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.25); }
+    .pu-btn.active { border-color: #ffd700; background: rgba(255,215,0,0.25); box-shadow: 0 0 15px #ffd700; }
+    .pu-btn.disabled { opacity: 0.3; }
     .pu-count {
-      position: absolute; top: -4px; right: -4px; background: #ff4d4d;
-      border-radius: 50%; width: 18px; height: 18px; font-size: 11px;
+      position: absolute; top: -5px; right: -5px; background: #ff4d4d;
+      border-radius: 50%; width: 20px; height: 20px; font-size: 12px;
       display: flex; align-items: center; justify-content: center; font-weight: bold;
     }
 
     .ball {
-      position: absolute; width: 58px; height: 58px; border-radius: 50%;
+      position: absolute; border-radius: 50%;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      font-size: 26px; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
       opacity: 0; animation: ballAppear 0.25s forwards; user-select: none;
-      transition: box-shadow 0.1s;
+      transition: box-shadow 0.1s; touch-action: manipulation;
+      /* mobile: 70px, desktop: 60px */
+      width: clamp(60px, 12vw, 75px);
+      height: clamp(60px, 12vw, 75px);
+      font-size: clamp(24px, 5vw, 32px);
     }
-    .ball:hover { transform: scale(1.2) !important; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+    .ball:active { transform: scale(0.9) !important; }
+    @media (hover: hover) { .ball:hover { transform: scale(1.2) !important; } }
     .red    { background: radial-gradient(circle at 35% 35%, #ff7070, #cc0000); }
     .green  { background: radial-gradient(circle at 35% 35%, #70ff70, #009900); }
     .bomb   { background: radial-gradient(circle at 35% 35%, #555, #111); }
@@ -83,21 +93,23 @@
 
     .popup {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(20,20,30,0.97); padding: 30px 45px; border-radius: 20px;
+      background: rgba(20,20,30,0.98); padding: 24px 28px; border-radius: 20px;
       text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-      color: #fff; z-index: 2000; animation: fadeIn 0.4s ease; min-width: 300px;
+      color: #fff; z-index: 2000; animation: fadeIn 0.4s ease;
+      width: min(92vw, 360px); max-height: 90vh; overflow-y: auto;
     }
-    .popup h2 { margin-bottom: 12px; font-size: 28px; color: #ffb347; }
-    .popup p  { font-size: 16px; margin: 6px 0; }
-    .popup .stat-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .popup h2 { margin-bottom: 10px; font-size: clamp(22px, 6vw, 28px); color: #ffb347; }
+    .popup p  { font-size: clamp(13px, 3.5vw, 16px); margin: 5px 0; }
+    .popup .stat-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: clamp(13px, 3.5vw, 15px); border-bottom: 1px solid rgba(255,255,255,0.08); }
     .popup .stat-row:last-child { border: none; }
     .popup button {
-      margin: 6px 4px 0; padding: 10px 20px; font-size: 15px; border: none;
-      border-radius: 12px; background: linear-gradient(135deg, #ff4d4d, #ff9966);
-      color: white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-      transition: transform 0.2s;
+      margin: 6px 4px 0; padding: 12px 18px; font-size: clamp(13px, 3.5vw, 15px); border: none;
+      border-radius: 14px; background: linear-gradient(135deg, #ff4d4d, #ff9966);
+      color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: transform 0.15s; min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
     }
-    .popup button:hover { transform: scale(1.08); }
+    .popup button:active { transform: scale(0.95); }
     .popup button.secondary { background: linear-gradient(135deg, #4488ff, #44aaff); }
     .popup button.third     { background: linear-gradient(135deg, #44bb44, #88dd44); }
     .popup button.fourth    { background: linear-gradient(135deg, #8844ff, #aa66ff); }
@@ -131,27 +143,6 @@
     }
     @keyframes floatScore {0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-65px) scale(1.4);}}
 
-    .achievement-toast {
-      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-      background: linear-gradient(135deg, #ffd700, #ff8800);
-      color: #1a0a00; padding: 10px 22px; border-radius: 25px;
-      font-size: 15px; font-weight: bold; z-index: 1500;
-      animation: toastIn 3s forwards;
-    }
-    @keyframes toastIn {
-      0%{opacity:0;transform:translateX(-50%) translateY(20px);}
-      10%{opacity:1;transform:translateX(-50%) translateY(0);}
-      80%{opacity:1;}
-      100%{opacity:0;transform:translateX(-50%) translateY(-10px);}
-    }
-
-    .blitz-bar-wrap {
-      position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-      width: 300px; height: 10px; background: rgba(255,255,255,0.15);
-      border-radius: 10px; z-index: 1000; overflow: hidden; display: none;
-    }
-    #blitz-bar { height: 100%; background: linear-gradient(90deg, #ff4d4d, #ffd700); width: 100%; transition: width 0.1s linear; }
-
     .shake { animation: shake 0.3s; }
     @keyframes shake {0%{transform:translate(0);}25%{transform:translate(6px,-6px);}50%{transform:translate(-6px,6px);}75%{transform:translate(6px,6px);}100%{transform:translate(0);}}
 
@@ -170,31 +161,48 @@
     @keyframes borderPulse {0%{border-color:rgba(100,200,255,0.2);}100%{border-color:rgba(100,200,255,0.7);}}
 
     .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    .leaderboard-table td { padding: 5px 8px; font-size: 14px; }
+    .leaderboard-table td { padding: 5px 8px; font-size: 13px; }
     .leaderboard-table tr:first-child td { color: #ffd700; }
 
-    #survival-warning {
-      position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-      background: rgba(255,50,50,0.85); padding: 5px 18px; border-radius: 20px;
-      font-size: 14px; font-weight: bold; display: none; z-index: 1001;
-      animation: warningPulse 0.5s infinite alternate;
-    }
     @keyframes warningPulse {0%{opacity:0.7;}100%{opacity:1;}}
 
     #menu-btn {
-      position: fixed; top: 20px; right: 20px;
-      background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+      position: fixed; top: 12px; right: 12px;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
       border: none; border-radius: 20px; color: #fff;
-      padding: 8px 15px; font-size: 13px; cursor: pointer;
-      z-index: 1000; transition: background 0.2s;
+      padding: 8px 13px; font-size: 13px; cursor: pointer;
+      z-index: 1000; min-height: 36px; min-width: 36px;
+      -webkit-tap-highlight-color: transparent;
     }
-    #menu-btn:hover { background: rgba(255,80,80,0.45); }
+    #menu-btn:active { background: rgba(255,80,80,0.5); }
 
     #accuracy-display {
-      position: fixed; top: 20px; left: 20px;
-      background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
-      border-radius: 20px; color: #fff; padding: 8px 14px;
-      font-size: 13px; font-weight: 600; z-index: 1000; display: none;
+      position: fixed; top: 12px; left: 12px;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      border-radius: 20px; color: #fff; padding: 7px 12px;
+      font-size: 12px; font-weight: 700; z-index: 1000; display: none;
+    }
+
+    #survival-warning {
+      position: fixed; top: 58px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,50,50,0.9); padding: 5px 16px; border-radius: 20px;
+      font-size: 13px; font-weight: bold; display: none; z-index: 1001;
+      animation: warningPulse 0.5s infinite alternate; white-space: nowrap;
+    }
+
+    .blitz-bar-wrap {
+      position: fixed; top: 55px; left: 50%; transform: translateX(-50%);
+      width: min(280px, 80vw); height: 8px; background: rgba(255,255,255,0.15);
+      border-radius: 10px; z-index: 1000; overflow: hidden; display: none;
+    }
+    #blitz-bar { height: 100%; background: linear-gradient(90deg, #ff4d4d, #ffd700); width: 100%; transition: width 0.1s linear; }
+
+    .achievement-toast {
+      position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, #ffd700, #ff8800);
+      color: #1a0a00; padding: 10px 20px; border-radius: 25px;
+      font-size: 14px; font-weight: bold; z-index: 1500;
+      animation: toastIn 3s forwards; white-space: nowrap;
     }
   </style>
 </head>
@@ -497,7 +505,13 @@ function createBall() {
   }
 
   let clicked = false;
-  ball.onclick = ()=>{ if(clicked)return; clicked=true; handleClick(type,ball); };
+  const handleTap = (e) => {
+    e.preventDefault();
+    if(clicked)return; clicked=true; handleClick(type,ball);
+  };
+  ball.addEventListener('click', handleTap);
+  ball.addEventListener('touchend', handleTap, {passive:false});
+  ball.addEventListener('contextmenu', e=>e.preventDefault());
   document.body.appendChild(ball);
 
   const lifetime = type==="fast-ball" ? 900 : Math.max(1200, 2500-level*120);
@@ -761,9 +775,11 @@ function endGame() {
     </div>
     <div style="margin-bottom:10px">
       <input id="player-name" type="text" maxlength="20" placeholder="შეიყვანე სახელი 🏆"
-        style="width:100%;padding:10px 14px;border-radius:12px;border:none;background:rgba(255,255,255,0.12);
-        color:#fff;font-size:15px;outline:none;text-align:center;margin-bottom:6px">
-      <button id="submit-score-btn" onclick="submitScore(${score},'${mode}',${acc})">🌍 Leaderboard-ზე გამოქვეყნება</button>
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        style="width:100%;padding:12px 14px;border-radius:14px;border:none;background:rgba(255,255,255,0.12);
+        color:#fff;font-size:16px;outline:none;text-align:center;margin-bottom:8px;
+        -webkit-appearance:none;">
+      <button id="submit-score-btn" onclick="submitScore(${score},'${mode}',${acc})" style="width:100%">🌍 Leaderboard-ზე გამოქვეყნება</button>
     </div>
     <button onclick="restartGame()">🔁 Restart</button>
     <button class="secondary" onclick="showLeaderboard()">📊 Global Scores</button>
@@ -892,6 +908,9 @@ function spawnParticles(){
 }
 
 showMenu();
+
+document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+document.addEventListener('contextmenu', e=>e.preventDefault());
 </script>
 </body>
 </html>
