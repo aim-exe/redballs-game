@@ -251,8 +251,57 @@
     .leaderboard-table{width:100%;border-collapse:collapse;margin-top:8px;}
     .leaderboard-table td{padding:5px 6px;font-size:12px;}
     .leaderboard-table tr:first-child td{color:#ffd700;}
-    /* CHART */
-    #stats-canvas{border-radius:12px;background:var(--card-bg);margin-top:10px;}
+    /* BOSS BALL */
+    .boss-ball {
+      position:absolute; border-radius:50%; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      user-select:none; touch-action:manipulation;
+      animation:bossAppear 0.5s forwards;
+      box-shadow:0 0 30px rgba(255,100,0,0.8), 0 0 60px rgba(255,50,0,0.4);
+    }
+    @keyframes bossAppear{0%{opacity:0;transform:scale(0.2);}60%{transform:scale(1.15);}100%{opacity:1;transform:scale(1);}}
+    .boss-ball:active{transform:scale(0.92)!important;}
+    .boss-hp{
+      position:absolute; bottom:-22px; left:50%; transform:translateX(-50%);
+      width:80px; height:8px; background:rgba(0,0,0,0.4); border-radius:8px; overflow:hidden;
+    }
+    .boss-hp-fill{height:100%;background:linear-gradient(90deg,#ff4444,#ff8800);border-radius:8px;transition:width 0.2s;}
+    .boss-hits{
+      position:absolute; top:-22px; left:50%; transform:translateX(-50%);
+      font-size:11px; font-weight:bold; color:#fff; white-space:nowrap;
+      text-shadow:0 0 6px #ff4400;
+    }
+    /* STREAK */
+    .streak-day{
+      display:inline-flex; flex-direction:column; align-items:center;
+      margin:4px; padding:8px 10px; border-radius:12px; min-width:44px;
+      background:var(--card-bg); border:2px solid var(--border); font-size:12px;
+    }
+    .streak-day.done{background:rgba(255,215,0,0.2);border-color:#ffd700;}
+    .streak-day.today{background:rgba(255,100,0,0.2);border-color:#ff6600;animation:streakPulse 1s infinite alternate;}
+    @keyframes streakPulse{0%{box-shadow:0 0 0 #ff6600;}100%{box-shadow:0 0 12px #ff6600;}}
+    .streak-reward{font-size:18px;margin-bottom:2px;}
+    .streak-label{font-size:10px;color:var(--text2);}
+    /* SHARE */
+    #share-btn{
+      position:fixed; bottom:90px; right:14px;
+      background:linear-gradient(135deg,#00ccff,#0055ff);
+      border:none; border-radius:50%; color:#fff; font-size:20px;
+      width:48px; height:48px; cursor:pointer; z-index:1000;
+      display:none; align-items:center; justify-content:center;
+      box-shadow:0 4px 15px rgba(0,100,255,0.4);
+    }
+    #share-btn:active{transform:scale(0.9);}
+    /* BOSS BAR */
+    #boss-bar-wrap{
+      position:fixed;top:55px;left:50%;transform:translateX(-50%);
+      background:var(--bar-bg);backdrop-filter:blur(8px);
+      padding:6px 16px;border-radius:20px;z-index:1001;
+      display:none;min-width:180px;text-align:center;
+    }
+    #boss-bar-label{font-size:11px;font-weight:700;color:#ff4400;margin-bottom:3px;}
+    #boss-bar-track{height:6px;background:var(--muted);border-radius:6px;overflow:hidden;}
+    #boss-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#ff4400,#ff8800);transition:width 0.25s;}
     /* RANK COLORS */
     .rank-bronze{color:#cd7f32;} .rank-silver{color:#aaa;} .rank-gold{color:#ffd700;}
     .rank-platinum{color:#00ffcc;} .rank-diamond{color:#88aaff;} .rank-legend{color:#ff44aa;}
@@ -276,6 +325,8 @@
 <div class="blitz-bar-wrap" id="blitz-bar-wrap"><div id="blitz-bar"></div></div>
 <div id="xp-bar-wrap"><div id="xp-rank-label">Bronze I</div><div id="xp-bar-track"><div id="xp-bar-fill" style="width:0%"></div></div></div>
 <div id="daily-bar-wrap"><span id="daily-label">📅 Daily</span><div id="daily-progress-bar"><div id="daily-progress-fill" style="width:0%"></div></div></div>
+<div id="boss-bar-wrap" style="display:none"><div id="boss-bar-label">👹 BOSS!</div><div id="boss-bar-track"><div id="boss-bar-fill" style="width:100%"></div></div></div>
+<button id="share-btn" style="display:none">📤</button>
 <div class="powerup-bar" id="powerup-bar" style="display:none">
   <div class="pu-btn" id="pu-slow" title="⚡ Slow">⚡<span class="pu-count" id="pu-slow-count">0</span></div>
   <div class="pu-btn" id="pu-magnet" title="🧲 Magnet">🧲<span class="pu-count" id="pu-magnet-count">0</span></div>
@@ -554,6 +605,184 @@ function drawChart(data){
   });
 }
 
+// ===== BOSS BALL =====
+let bossActive=false, bossHP=0, bossMaxHP=0;
+
+function spawnBoss(){
+  if(bossActive||!gameActive)return;
+  bossActive=true;
+  bossMaxHP=3+Math.floor(level/2);
+  bossHP=bossMaxHP;
+  const boss=document.createElement("div");
+  boss.className="boss-ball";
+  boss.id="boss-el";
+  const sz=clamp(90,18,120);
+  boss.style.cssText=`width:${sz}px;height:${sz}px;font-size:${Math.round(sz*0.45)}px;`;
+  boss.innerHTML=`👹<div class="boss-hp"><div class="boss-hp-fill" id="boss-hp-fill" style="width:100%"></div></div><div class="boss-hits" id="boss-hits-label">${bossHP} hits</div>`;
+  const px=window.innerWidth/2-sz/2;
+  const py=window.innerHeight/2-sz/2;
+  boss.style.left=px+"px";boss.style.top=py+"px";
+  let bvx=(Math.random()-0.5)*ballSpeed*1.5;
+  let bvy=(Math.random()-0.5)*ballSpeed*1.5;
+  if(Math.abs(bvx)<0.4)bvx=0.4*Math.sign(bvx||1);
+  if(Math.abs(bvy)<0.4)bvy=0.4*Math.sign(bvy||1);
+  boss.addEventListener("pointerdown",e=>{
+    e.preventDefault();e.stopPropagation();
+    hitBoss(boss);
+  },{passive:false});
+  boss.addEventListener("contextmenu",e=>e.preventDefault());
+  document.body.appendChild(boss);
+  document.getElementById("boss-bar-wrap").style.display="block";
+  showToast("👹 BOSS! "+bossHP+" hits!","event");
+  playSound("level");
+  // boss movement
+  const bossObj={el:boss,px,py,vx:bvx,vy:bvy,type:"boss",clicked:()=>false};
+  activeBalls.push(bossObj);
+  moveBoss(bossObj);
+}
+
+function moveBoss(obj){
+  if(!gameActive||!bossActive)return;
+  const spd=activePowerups.slow?0.25:1;
+  obj.px+=obj.vx*spd;obj.py+=obj.vy*spd;
+  const W=window.innerWidth-110,H=window.innerHeight-110;
+  if(obj.px<0){obj.px=0;obj.vx*=-1;}if(obj.px>W){obj.px=W;obj.vx*=-1;}
+  if(obj.py<0){obj.py=0;obj.vy*=-1;}if(obj.py>H){obj.py=H;obj.vy*=-1;}
+  if(obj.el.parentNode){obj.el.style.left=obj.px+"px";obj.el.style.top=obj.py+"px";}
+  if(bossActive){const af=requestAnimationFrame(()=>moveBoss(obj));animFrames.push(af);}
+}
+
+function hitBoss(boss){
+  if(!bossActive)return;
+  bossHP--;
+  const pct=Math.max(0,bossHP/bossMaxHP*100);
+  document.getElementById("boss-hp-fill").style.width=pct+"%";
+  document.getElementById("boss-hits-label").textContent=bossHP+" hits";
+  document.getElementById("boss-bar-fill").style.width=pct+"%";
+  const rect=boss.getBoundingClientRect();
+  createExplosion(rect.left+25,rect.top+25,"#ff4400");
+  createScoreFloat(rect.left,rect.top,"💥 HIT!",null);
+  playSound("bomb");
+  boss.style.transform="scale(1.15)";
+  setTimeout(()=>{boss.style.transform="";},100);
+  if(bossHP<=0){
+    bossActive=false;
+    const xpBonus=20+level*5;
+    const pts=15+level*3;
+    score+=pts;addXP(xpBonus);updateUI();
+    createScoreFloat(rect.left,rect.top-40,`+${pts} BOSS!`,null);
+    showToast(`👹 Boss დამარცხდა! +${xpBonus}XP`,"rank");
+    playSound("rank");
+    boss.remove();
+    removeBallRef(boss);
+    document.getElementById("boss-bar-wrap").style.display="none";
+    checkAchievements("boss_killed");
+    setTimeout(()=>createBall(),500);
+  }
+}
+
+function clamp(val,min,max){return Math.min(max,Math.max(min,val));}
+
+// ===== DAILY STREAK =====
+const STREAK_REWARDS=[
+  {day:1,icon:"🎯",label:"Day 1",reward:""},
+  {day:2,icon:"⚡",label:"Day 2",reward:"slow"},
+  {day:3,icon:"🧲",label:"Day 3",reward:"magnet"},
+  {day:4,icon:"🛡️",label:"Day 4",reward:"shield"},
+  {day:5,icon:"⭐",label:"Day 5",reward:"xp50"},
+  {day:6,icon:"💎",label:"Day 6",reward:"xp100"},
+  {day:7,icon:"👑",label:"Day 7",reward:"all"},
+];
+
+function getStreakData(){
+  return JSON.parse(localStorage.getItem("rbStreak")||'{"days":[],"lastDate":""}');
+}
+
+function checkDailyLogin(){
+  const data=getStreakData();
+  const today=new Date().toISOString().slice(0,10);
+  if(data.lastDate===today)return data;
+  const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if(data.lastDate!==yesterday)data.days=[];
+  data.days.push(today);
+  if(data.days.length>7)data.days=data.days.slice(-7);
+  data.lastDate=today;
+  localStorage.setItem("rbStreak",JSON.stringify(data));
+  return data;
+}
+
+function applyStreakReward(reward){
+  if(!reward)return;
+  if(reward==="slow"||reward==="magnet"||reward==="shield"){
+    powerupCounts[reward]=Math.min(powerupCounts[reward]+2,3);
+    updatePowerupUI();
+  } else if(reward==="xp50"){addXP(50);}
+  else if(reward==="xp100"){addXP(100);}
+  else if(reward==="all"){
+    powerupCounts.slow=3;powerupCounts.magnet=3;powerupCounts.shield=3;
+    updatePowerupUI();addXP(50);
+  }
+}
+
+function showStreakPopup(){
+  const data=checkDailyLogin();
+  const streak=data.days.length;
+  const todayIdx=streak-1;
+  const todayReward=STREAK_REWARDS[Math.min(todayIdx,6)];
+  const already=JSON.parse(localStorage.getItem("rbStreakClaimed")||'""')===data.lastDate;
+  const days=STREAK_REWARDS.map((r,i)=>{
+    const done=i<todayIdx;
+    const isToday=i===todayIdx;
+    return`<div class="streak-day ${done?"done":""} ${isToday?"today":""}">
+      <div class="streak-reward">${r.icon}</div>
+      <div class="streak-label">${r.label}</div>
+    </div>`;
+  }).join("");
+  const d=document.createElement("div");d.className="popup";d.id="streak-popup";
+  d.innerHTML=`
+    <h2>🔥 Daily Streak</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:10px">დღე ${streak} • დღევანდელი ჯილდო: ${todayReward.icon}</p>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;margin:8px 0">${days}</div>
+    <br>
+    ${already
+      ? `<button onclick="document.getElementById('streak-popup').remove();showMenu()" class="secondary">✅ უკვე მიღებულია</button>`
+      : `<button onclick="claimStreak('${data.lastDate}','${todayReward.reward}')">🎁 მიღება! ${todayReward.icon}</button>`
+    }
+    <button onclick="document.getElementById('streak-popup').remove();showMenu()" class="third" style="margin-top:6px">🏠 მენიუ</button>
+  `;
+  clearScreen();document.body.appendChild(d);
+}
+
+function claimStreak(date,reward){
+  localStorage.setItem("rbStreakClaimed",JSON.stringify(date));
+  applyStreakReward(reward);
+  playSound("daily");
+  document.getElementById("streak-popup")?.remove();
+  showToast("🎁 ჯილდო მიღებული!","achievement");
+  showMenu();
+}
+
+// ===== SHARE =====
+function shareScore(){
+  const rank=getRank(totalXP);
+  const modeEmoji={normal:"🎮",aim:"🎯",survival:"💀",ghost:"👻",blitz:"⚡"};
+  const gameUrl=window.location.href.split("?")[0];
+  const text=`${modeEmoji[mode]||"🎮"} Red Balls Pro\n🎯 ქულა: ${score}\n🔥 Max Combo: x${biggestCombo}\n⬡ რანგი: ${rank.name}\n🏆 Best: ${bestScore}\n\n🕹 ითამაშე: ${gameUrl}`;
+  if(navigator.share){
+    navigator.share({title:"Red Balls Pro - "+score+" ქულა",text}).catch(()=>copyToClipboard(text));
+  } else {
+    copyToClipboard(text);
+  }
+}
+
+function copyToClipboard(text){
+  navigator.clipboard?.writeText(text).then(()=>showToast("📋 კოპირდა!","daily")).catch(()=>{
+    const ta=document.createElement("textarea");ta.value=text;
+    document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
+    showToast("📋 კოპირდა!","daily");
+  });
+}
+
 // ===== STATE =====
 let mode,score,timeLeft,level,ballsHit,combo,lastClick,gameActive;
 let spawnSpeed,ballSpeed,lives;
@@ -574,10 +803,12 @@ const ACHIEVEMENTS=[
   {id:"ghost_hunter",label:"👻 Ghost Hunter!",check:()=>false},
   {id:"daily_done",label:"📅 Daily Challenge!",check:()=>false},
   {id:"legend_rank",label:"👑 Legend Rank!",check:()=>totalXP>=2500},
+  {id:"boss_killed",label:"👹 Boss დამარცხდა!",check:()=>false},
+  {id:"streak_7",label:"🔥 7 დღის streak!",check:()=>false},
 ];
 
 // DOM
-const scoreEl=document.getElementById("score"),timeEl=document.getElementById("time"),levelEl=document.getElementById("level"),comboEl=document.getElementById("combo"),bestEl=document.getElementById("best"),livesEl=document.getElementById("lives"),livesDisp=document.getElementById("lives-display"),menuBtn=document.getElementById("menu-btn"),survWarn=document.getElementById("survival-warning"),accDisp=document.getElementById("accuracy-display"),accVal=document.getElementById("acc-val"),blitzWrap=document.getElementById("blitz-bar-wrap"),blitzBar=document.getElementById("blitz-bar"),soundBtn=document.getElementById("sound-btn"),themeBtn=document.getElementById("theme-btn"),dailyBarWrap=document.getElementById("daily-bar-wrap"),dailyLabel=document.getElementById("daily-label"),dailyFill=document.getElementById("daily-progress-fill"),xpWrap=document.getElementById("xp-bar-wrap"),rankBadge=document.getElementById("rank-badge");
+const scoreEl=document.getElementById("score"),timeEl=document.getElementById("time"),levelEl=document.getElementById("level"),comboEl=document.getElementById("combo"),bestEl=document.getElementById("best"),livesEl=document.getElementById("lives"),livesDisp=document.getElementById("lives-display"),menuBtn=document.getElementById("menu-btn"),survWarn=document.getElementById("survival-warning"),accDisp=document.getElementById("accuracy-display"),accVal=document.getElementById("acc-val"),blitzWrap=document.getElementById("blitz-bar-wrap"),blitzBar=document.getElementById("blitz-bar"),soundBtn=document.getElementById("sound-btn"),themeBtn=document.getElementById("theme-btn"),dailyBarWrap=document.getElementById("daily-bar-wrap"),dailyLabel=document.getElementById("daily-label"),dailyFill=document.getElementById("daily-progress-fill"),xpWrap=document.getElementById("xp-bar-wrap"),rankBadge=document.getElementById("rank-badge"),shareBtn=document.getElementById("share-btn"),bossBarWrap=document.getElementById("boss-bar-wrap");
 
 bestEl.textContent=bestScore;
 soundBtn.textContent=soundOn?"🔊":"🔇";
@@ -592,24 +823,33 @@ applyTheme();applySkin();updateXPBar();
 let sbT=false;
 soundBtn.addEventListener("pointerdown",e=>{e.preventDefault();toggleSound();},{passive:false});
 themeBtn.addEventListener("pointerdown",e=>{e.preventDefault();toggleTheme();},{passive:false});
+shareBtn.addEventListener("pointerdown",e=>{e.preventDefault();shareScore();},{passive:false});
 
 // ===== MENU =====
 function showMenu(){
-  clearScreen();stopEventSystem();
+  clearScreen();stopEventSystem();bossActive=false;
   document.getElementById("powerup-bar").style.display="none";
   accDisp.style.display="none";blitzWrap.style.display="none";
   menuBtn.style.display="none";soundBtn.style.display="none";themeBtn.style.display="none";
+  shareBtn.style.display="none";bossBarWrap.style.display="none";
   dailyBarWrap.style.display="none";xpWrap.style.display="none";rankBadge.style.display="none";
   document.body.style.background=`linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3))`;
   applySkin();
   const ch=getDailyChallenge();
   const rank=getRank(totalXP);
+  const streakData=getStreakData();
+  const streak=streakData.days.length;
   const d=document.createElement("div");d.className="popup";
   d.innerHTML=`
     <h2>🎮 Red Balls Pro</h2>
     ${profile?`<p style="color:var(--text2);font-size:12px">👤 ${profile.name} <span style="color:${rank.color}">⬡ ${rank.name}</span> &nbsp;<button onclick="showProfileSetup('menu')" style="padding:4px 8px;font-size:11px;min-height:0;background:var(--card-bg);color:var(--text)">✏️</button></p>`:`<button onclick="showProfileSetup('menu')" style="margin-bottom:8px;background:linear-gradient(135deg,#555,#888)">👤 პროფილის შექმნა</button><br>`}
-    <div style="background:rgba(0,180,255,0.1);border:1px solid rgba(0,180,255,0.3);border-radius:12px;padding:8px 12px;margin:8px 0;font-size:12px;color:var(--text)">
-      📅 Daily: <b>${ch.label}</b> ${ch.done?"✅":""}
+    <div style="display:flex;gap:6px;margin:8px 0">
+      <div style="flex:1;background:rgba(0,180,255,0.1);border:1px solid rgba(0,180,255,0.3);border-radius:12px;padding:8px;font-size:12px;color:var(--text)">
+        📅 <b>${ch.label}</b> ${ch.done?"✅":""}
+      </div>
+      <div style="background:rgba(255,100,0,0.15);border:1px solid rgba(255,100,0,0.4);border-radius:12px;padding:8px;font-size:12px;text-align:center;min-width:60px;cursor:pointer" onclick="showStreakPopup()">
+        🔥 <b>${streak}</b><br><span style="font-size:10px;color:var(--text2)">streak</span>
+      </div>
     </div>
     <button onclick="startGame('normal')">🎮 Normal</button>
     <button class="secondary" onclick="startGame('aim')">🎯 Aim</button>
@@ -623,6 +863,8 @@ function showMenu(){
     <br>
     <button onclick="showSkins()" style="background:linear-gradient(135deg,#ff44aa,#ff88cc)">🎨 სკინები</button>
     <button onclick="showStats()" style="background:linear-gradient(135deg,#0088ff,#00ccff)">📈 სტატისტიკა</button>
+    <br>
+    <button onclick="showStreakPopup()" style="background:linear-gradient(135deg,#ff6600,#ffaa00)">🔥 Daily Streak (${streak} დღე)</button>
   `;
   document.body.appendChild(d);
 }
@@ -661,7 +903,7 @@ function checkAchievements(extra){
 function initGame(selectedMode){
   mode=selectedMode;score=0;level=1;ballsHit=0;combo=0;lastClick=0;gameActive=true;
   totalClicks=0;totalHits=0;biggestCombo=0;fastestClick=9999;lastHitTime=0;
-  goldenHits=0;fastHits=0;bombHits=0;activeEvent=null;
+  goldenHits=0;fastHits=0;bombHits=0;activeEvent=null;bossActive=false;
   powerupCounts={slow:1,magnet:1,shield:1};activePowerups={slow:false,magnet:false,shield:false};
   activeBalls=[];lives=3;
   if(mode==="aim"){timeLeft=30;spawnSpeed=250;ballSpeed=1.5;}
@@ -863,7 +1105,12 @@ function nextLevel(){
   level++;ballsHit=0;timeLeft+=10;ballSpeed+=0.2;spawnSpeed=Math.max(250,spawnSpeed-50);
   powerupCounts.slow=Math.min(powerupCounts.slow+1,3);playSound("level");
   showPopup(`⚡ Level ${level}!`);updateUI();updatePowerupUI();
-  setTimeout(()=>createBall(),1000);
+  // spawn boss every 3 levels
+  if(level%3===0&&!bossActive){
+    setTimeout(()=>spawnBoss(),1200);
+  } else {
+    setTimeout(()=>createBall(),1000);
+  }
 }
 
 // ===== END GAME =====
@@ -881,6 +1128,8 @@ function endGame(){
   scores.push({score,level,mode,acc});if(scores.length>30)scores.shift();
   localStorage.setItem("rbScores",JSON.stringify(scores));
   if(score>bestScore)bestScore=score;bestEl.textContent=bestScore;
+  bossBarWrap.style.display="none";
+  shareBtn.style.display="flex";
   document.body.style.background=`linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3))`;
   const modeLabel={normal:"🎮 Normal",aim:"🎯 Aim",survival:"💀 Survival",ghost:"👻 Ghost",blitz:"⚡ Blitz"};
   const rank=getRank(totalXP);
@@ -922,13 +1171,14 @@ function restartGame(){stopAll();initGame(mode);}
 function confirmMenu(){stopAll();showMenu();}
 function returnToMenu(){stopAll();showMenu();}
 function stopAll(){
-  gameActive=false;stopEventSystem();
+  gameActive=false;bossActive=false;stopEventSystem();
   clearInterval(survivalTimer);clearInterval(blitzInterval);
   animFrames.forEach(af=>cancelAnimationFrame(af));animFrames=[];activeBalls=[];
   survWarn.style.display="none";menuBtn.style.display="none";
-  soundBtn.style.display="none";themeBtn.style.display="none";
+  soundBtn.style.display="none";themeBtn.style.display="none";shareBtn.style.display="none";
   livesDisp.style.display="none";accDisp.style.display="none";blitzWrap.style.display="none";
   dailyBarWrap.style.display="none";xpWrap.style.display="none";rankBadge.style.display="none";
+  bossBarWrap.style.display="none";
   if(slowOverlay){slowOverlay.remove();slowOverlay=null;}
 }
 function updateUI(){scoreEl.textContent=score;if(mode!=="survival")timeEl.textContent=timeLeft;levelEl.textContent=level;comboEl.textContent=combo;}
